@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+library(dplyr)
+```
+
+> Source: https://www.eia.gov/dnav/ng/ng_pri_fut_s1_d.htm
+
+```{r}
+read.csv2("data/Natural_Gas_Spot_and_Futures_Prices_(NYMEX).csv", sep = ",")  %>% 
+  mutate(Day = as.Date(Day, format = "%m/%d/%Y")) %>% 
+  arrange(Day)
+```
+
+> Source: https://www.eia.gov/dnav/pet/pet_pri_fut_s1_d.htm
+
+```{r}
+
+```
+
+
+
+```{python}
+import pandas as pd
+```
