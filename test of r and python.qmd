@@ -1,29 +1,781 @@
 ---
-title: "Untitled"
+title: "Notes for projects"
 format: html
 ---
+
+# INstalling python
+
+```{r}
+library(reticulate)
+py_config()
+```
+
 
 
 ```{r}
 library(dplyr)
+library(timetk)
+library(ggplot2)
+library(tseries)
 ```
 
 > Source: https://www.eia.gov/dnav/ng/ng_pri_fut_s1_d.htm
 
 ```{r}
-read.csv2("data/Natural_Gas_Spot_and_Futures_Prices_(NYMEX).csv", sep = ",")  %>% 
+df <-
+  read.csv2("data/Natural_Gas_Spot_and_Futures_Prices_(NYMEX).csv", sep = ",")  %>% 
   mutate(Day = as.Date(Day, format = "%m/%d/%Y")) %>% 
-  arrange(Day)
+  arrange(Day) %>% 
+  janitor::clean_names() %>% 
+  mutate(spot = as.numeric(henry_hub_natural_gas_spot_price_mmbtu))  %>% 
+  select(c(1, 7))  %>% 
+  filter(!is.na(spot))
+
+df %>% 
+  glimpse()
 ```
 
-> Source: https://www.eia.gov/dnav/pet/pet_pri_fut_s1_d.htm
+```{r}
+df %>% 
+  plot_time_series(.date_var = day,
+                   .value = spot)
+```
+
+## Test
+
+When working with time series data in R, there are various statistical tests you can use to test for stationarity. Here are some of the commonly used tests:
+
+Augmented Dickey-Fuller (ADF) test: This is a widely used test for testing stationarity. The ADF test checks whether a time series has a unit root, which is a characteristic of non-stationary time series. If the test rejects the presence of a unit root, the series is considered stationary.
+
+Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test: This test is used to test for the presence of a unit root in a time series. It is the opposite of the ADF test in the sense that it tests for non-stationarity. If the test fails to reject the null hypothesis of stationarity, the series is considered stationary.
+
+Phillips-Perron (PP) test: This test is similar to the ADF test and is used to test for the presence of a unit root in a time series. The PP test is a modified version of the ADF test that corrects for any serial correlation in the errors of the regression.
+
+Ljung-Box test: This test is used to check whether a time series is white noise, which is a characteristic of stationary time series. The test checks whether there is any autocorrelation in the series, and if the test fails to reject the null hypothesis of no autocorrelation, the series is considered stationary.
+
+It is important to note that different tests have different assumptions and can give different results. Therefore, it is recommended to use multiple tests to ensure the accuracy of the results. Also, visual inspection of the time series plot can also provide useful information about the stationarity of the series.
+
+
+```{r}
+# Load the required packages
+library(tidyverse)
+library(tseries)
+library(stats)
+
+# Create a list of test functions
+test_funcs <- list(kpss = kpss.test, 
+                   pp = pp.test, 
+                   adf = adf.test,
+                   ljung_box = function(x) Box.test(x, type = "Ljung-Box"))
+
+# Apply the tests in a loop
+results <- list()
+for (test_name in names(test_funcs)) {
+  result <- test_funcs[[test_name]](df$spot)
+  results[[test_name]] <- result$p.value
+}
+
+# Print the results
+results
+```
+
+adf.test(), If the p-value is less than the significance level (usually 0.05), we reject the null hypothesis of a unit root and conclude that the time series is stationary. If the p-value is greater than the significance level, we fail to reject the null hypothesis and conclude that the time series is non-stationary. For the example of 0.9032 then Since the p-value is greater than 0.05, we fail to reject the null hypothesis of a unit root and conclude that the time series is non-stationary.
+
+kpss.test(), If the p-value is greater than the significance level (usually 0.05), we fail to reject the null hypothesis of stationarity and conclude that the time series is stationary. If the p-value is less than the significance level, we reject the null hypothesis and conclude that the time series is non-stationary. for 0.1, Since the p-value is greater than 0.05, we fail to reject the null hypothesis of stationarity and conclude that the time series is stationary.
+
+pp.test(), If the p-value is less than the significance level (usually 0.05), we reject the null hypothesis of a unit root and conclude that the time series is stationary. If the p-value is greater than the significance level, we fail to reject the null hypothesis and conclude that the time series is non-stationary. 0.01, 
+
+Box.test(), If the p-value is greater than the significance level (usually 0.05), we fail to reject the null hypothesis of no autocorrelation and conclude that the time series is stationary. If the p-value is less than the significance level, we reject the null hypothesis and conclude that the time series is non-stationary. for 0.2, Since the p-value is greater than 0.05, we fail to reject the null hypothesis of no autocorrelation and conclude that the time series is stationary.
+
+
+```{r}
+tseries::adf.test(df$spot)
+```
+
+## outliers
+
+Yes, outliers can affect the conclusion about the stationarity of a time series. Outliers are data points that are significantly different from the other data points in the series and can occur due to measurement errors, data entry errors, or other factors.
+
+Outliers can have a significant impact on the statistical properties of the time series, such as the mean, variance, and autocorrelation structure. Outliers can also cause a time series to appear non-stationary when it is actually stationary or vice versa.
+
+In general, it is a good practice to identify and handle outliers before conducting any statistical analysis, including stationarity tests. There are several techniques for identifying and handling outliers, such as removing them, imputing them, or transforming the data to make them less influential.
+
+If outliers are present in the time series and not handled appropriately, they can lead to incorrect conclusions about the stationarity of the time series. Therefore, it is important to examine the data for outliers and consider their impact on the analysis.
+
+utliers in the time series. Here are a few common methods:
+
+1) Remove the outliers: One straightforward approach is to remove the outliers from the time series. This can be done by identifying the data points that are outside a certain range, such as the upper and lower quartiles or a certain number of standard deviations from the mean. The boxplot.stats function in R can be used to identify outliers and the subset function can be used to remove them from the time series.
+
+```{r}
+# Identify and remove outliers using the interquartile range method
+q <- df %>% 
+  summarise(q1 = quantile(spot, probs = 0.25),
+            q3 = quantile(spot, probs = 0.75)) %>% 
+  unlist()
+
+iqr <- q[2] - q[1]
+threshold <- q[1] - 1.5 * iqr
+
+df_whitout_outliers <- df %>% 
+  filter(spot <= (q[2] + 1.5 * iqr) & spot >= threshold) 
+
+df_whitout_outliers %>% 
+  plot_time_series(.date_var = day,
+                   .value = spot)
+```
+
+```{r}
+  # Add rows for missing dates and fill in missing values with zeros
+df_filled <- df %>% 
+  complete(day = seq(min(day), max(day), by = "day")) %>% 
+  replace_na(list(spot = 0))
+
+# Take the first difference of the time series
+df_filled %>% 
+  mutate(diff = spot - lag(spot, default = first(spot))) %>% 
+  plot_time_series(.date_var = day,
+                   .value = diff)
+```
+
 
 ```{r}
 
+
+df_filled %>% 
+  mutate(diff = spot - lag(spot)) %>%
+  na.omit() %>% 
+  plot_time_series(.date_var = day,
+                   .value = diff)
+```
+
+```{r}
+# Define a function to apply the ADF test to a single column
+adf_test <- function(x) {
+  ur.df(x, type = "drift")
+}
+
+stationarity_tests <- function(x) {
+  list(ADF = adf.test(x))
+}
+
+df_filled %>% 
+  select(-day) %>% 
+  map(stationarity_tests)
+```
+
+```{r}
+# Apply the tests in a loop
+results <- list()
+for (test_name in names(test_funcs)) {
+  result <- test_funcs[[test_name]](df_whitout_outliers$spot)
+  results[[test_name]] <- result$p.value
+}
+
+# Print the results
+results
+```
+
+
+2) Winsorization: Winsorization is a technique that replaces the extreme values with less extreme values. This can be done by setting a threshold beyond which the extreme values are replaced with the next highest or lowest value within the threshold. The winsorize function in the DescTools package in R can be used for this purpose.
+
+```{r}
+# Winsorize the time series
+library(DescTools)
+DescTools::Winsorize()
+df %>% 
+  mutate(value = Winsorize(value))
+
+```
+
+
+3) Data Transformation: Transforming the data can reduce the impact of outliers on the analysis. Common transformations include taking the logarithm or square root of the data or applying the Box-Cox transformation. The log and sqrt functions are built into R, and the boxcox function is available in the MASS package.
+
+```{r}
+df %>% 
+  mutate(spot = log(spot))  %>% 
+  filter(across(c(day, spot), ~ !is.na(.))) %>% 
+  plot_time_series(.date_var = day,
+                   .value = spot,
+                   .smooth = FALSE)
+```
+
+
+4) Imputation: Another approach is to impute the missing values or the outliers with estimated values. This can be done using regression models or interpolation techniques. The imputeTS package in R provides several functions for imputing missing values or outliers.
+
+```{r}
+library(imputeTS)
+
+df %>% 
+  na_interpolation(option = "linear")  %>% 
+  plot_time_series(.date_var = day,
+                   .value = spot)
+```
+
+
+It is important to note that each method has its advantages and disadvantages, and the choice of method depends on the specific characteristics of the time series and the research question. Additionally, it is important to document any data manipulation or outlier handling techniques used in the analysis to ensure transparency and reproducibility.
+
+
+```{r}
+# Generate a time series with outliers
+set.seed(123)
+ts_out <- ts(c(rnorm(100), rnorm(10, mean = 10, sd = 2), rnorm(100)), frequency = 12, start = c(2000, 1))
+
+# Identify and remove outliers using the interquartile range method
+q <- quantile(ts_out, probs = c(0.25, 0.75), na.rm = TRUE)
+iqr <- q[2] - q[1]
+threshold <- q[1] - 1.5 * iqr
+ts_out_no_outliers <- subset(ts_out, ts_out <= (q[2] + 1.5 * iqr) & ts_out >= threshold)
+
+```
+
+
+
+
+
+```{r}
+readxl::excel_sheets("file.xlsx")
+sheets <- openxlsx::getSheetNames("file.xlsx")
+
+library(readxl)
+
+df_list <- lapply(excel_sheets("file.xlsx"), function(x)
+read_excel("data.xlsx", sheet = x)
+)
+```
+
+
+> Source: https://www.eia.gov/dnav/pet/pet_pri_fut_s1_d.htm
+
+## Modules
+
+```{python}
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+from bs4 import BeautifulSoup
+import argparse
+import time
+import json
+import requests
+# For making use of curl function
+import subprocess
+from pandas import date_range
+# for cleanin names
+from janitor import clean_names, remove_empty
+import nasdaqdatalink
+pd.options.display.max_colwidth = 100
+```
+
+
+```{python}
+mydata = nasdaqdatalink.get("NASDAQOMX/COMP-NASDAQ")
 ```
 
 
 
 ```{python}
-import pandas as pd
+mydata
 ```
+
+
+```{python}
+sp500 = yf.Ticker("^GSPC").history(period="5y")
+```
+
+
+```{python}
+sp500 = (
+  sp500
+  .drop(columns=['Dividends', 'Stock Splits'])
+)
+
+```
+
+
+```{python}
+(
+  sp500
+  .describe()
+)
+```
+
+
+```{python}
+# We can use pandas to calculate the moving average for different time periods
+sp500['50ma'] = sp500['Close'].rolling(window=50).mean()
+sp500['200ma'] = sp500['Close'].rolling(window=200).mean()
+```
+
+```{python}
+# Let's plot the data to see the moving averages
+plt.figure(figsize=(15, 5))
+plt.title('S&P 500 Close Price with 200 and 50-Day Moving Average')
+plt.plot(sp500['Close'])
+plt.plot(sp500['50ma'])
+plt.plot(sp500['200ma'])
+plt.legend(['Close', '50MA', '200MA'])
+plt.show()
+```
+
+
+```{python}
+# Calculate the daily return of the close price
+sp500['return'] = sp500['Close'].pct_change()
+
+# Plot the daily return
+plt.figure(figsize=(15, 5))
+plt.title('S&P 500 Daily Return')
+plt.plot(sp500['return'])
+plt.show()
+```
+
+
+
+```{python}
+# Plot the daily return using an histogram
+plt.figure(figsize=(15, 3))
+plt.title('S&P 500 Daily Return')
+sp500['return'].hist(bins=200, grid=False)
+plt.show()
+```
+
+
+```{python}
+dji = yf.Ticker("^DJI").history(period="5y")
+
+dji['50ma'] = dji['Close'].rolling(window=50).mean()
+dji['200ma'] = dji['Close'].rolling(window=200).mean()
+
+plt.figure(figsize=(15, 5))
+plt.title('Dow Close Price with 200 and 50-Day Moving Average')
+plt.plot(dji['Close'])
+plt.plot(dji['50ma'])
+plt.plot(dji['200ma'])
+plt.legend(['Close', '50MA', '200MA'])
+plt.show()
+```
+
+
+```{python}
+from yahoofinancials import YahooFinancials
+
+yahoo_financials_currencies = YahooFinancials('EURUSD=X')
+```
+
+```{python}
+yahoo_financials_currencies
+```
+
+
+```{python}
+currencies = ['EURUSD=X']
+
+daily_currency_prices = (
+  yahoo_financials_currencies
+  .get_historical_price_data('2008-09-15', '2018-09-15', 'daily')
+)
+
+pd.json_normalize(daily_currency_prices)
+
+pd.json_normalize(
+    daily_currency_prices, 
+    
+    meta=['date', 'high', 'low', 'open', 'close', 'volume', 'adjclose', 'formatted_date']
+)
+```
+
+```{python}
+```
+
+```{python}
+# Create an URL object
+url = 'https://finance.yahoo.com/quote/TTF%3DF/history?period1=1508716800&period2=1675296000&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true'
+# Create object page
+page = requests.get(url)
+```
+
+```{python}
+page.content
+```
+
+```{python}
+argparse.ArgumentParser(description='download news arg parser')
+parser = argparse.ArgumentParser(description='buying strategy parsing')
+parser.add_argument('--from_day', type=str, help='start buying date', required=True)
+parser.add_argument('--to_day', type=str, help='to buying date', required=True)
+args = parser.parse_args()
+
+drange = date_range(args.from_day, args.to_day, freq='M')
+for i in drange:
+    print(i)
+    r = ''
+    for p in range(1,10):
+        payload = {'api-key': '871fcfde-dc25-4301-9a5c-394f5a636e25', 'page-size': 200,
+                   'from-date': i.replace(day=1).date(), 'type': 'article',
+                   'to-date': i.date(), 'q': 'gas', 'page': p}
+        r2 = requests.get('https://content.guardianapis.com/search', params=payload).json()
+        if p == 1:
+            r = r2
+        else:
+            if r2['response'].get('result'):
+                r['response']['results'].extend(r2['response']['results'])
+            else:
+                break
+    with open('g_news_%s.json' % i.date(), 'w', encoding='utf-8') as outfile:
+        print('g_news_%s.json' % i.date())
+        outfile.write(json.dumps(r))
+    time.sleep(0.1)
+```
+
+
+```
+https://content.guardianapis.com/search?q=12%20years%20a%20slave&format=json&tag=film/film,tone/reviews&from-date=2010-01-01&show-tags=contributor&show-fields=starRating,headline,thumbnail,short-url&order-by=relevance&api-key=test
+```
+
+```{python}
+test = requests.get('https://content.guardianapis.com/search?q=gas&page-size=200&api-key=871fcfde-dc25-4301-9a5c-394f5a636e25').json()
+```
+
+
+```{python}
+test['response']['results']
+```
+
+```{python}
+test['response']['total']
+```
+
+```{python}
+json_responses = []
+number_of_results = test['response']['total']
+
+
+pd.json_normalize(test['response']['results'])
+```
+
+```{python}
+def query_api(tag, page, from_date, api_key):
+    """
+    Function to query the API for a particular tag
+    returns: a response from API
+    """
+    response = requests.get("https://content.guardianapis.com/search?tag="
+                            + tag + "&from-date=" + from_date 
+                            +"&page=" + str(page) + "&page-size=200&api-key=" + api_key)
+    return response
+def get_results_for_tag(tag, from_date, api_key):
+    """
+    Function to run a for loop for results greater than 200. 
+    Calls the query_api function accordingly
+    returns: a list of JSON results
+    """
+    json_responses = []
+    response = query_api(tag, 1, from_date, api_key).json()
+    json_responses.append(response)
+    number_of_results = response['response']['total']
+    if number_of_results > 200:
+        for page in range(2, (round(number_of_results/200))+1):
+            response = query_api(tag, page, from_date, api_key).json()
+            json_responses.append(response)
+    return json_responses
+
+def convert_json_responses_to_df(json_responses):
+    """
+    Function to convert the list of json responses to a dataframe
+    """
+    df_results = []
+    for json in json_responses:
+        df = pd.json_normalize(json['response']['results'])
+        df_results.append(df)
+    all_df = pd.concat(df_results)
+    return all_df
+```
+
+```{python}
+json_responses = get_results_for_tag('environment/gas',
+ '2010-01-01', 
+ '871fcfde-dc25-4301-9a5c-394f5a636e25')
+```
+
+```{python}
+df = convert_json_responses_to_df(json_responses)
+df.webTitle
+```
+
+
+```{python}
+df_results = []
+for json in test:
+  df = pd.json_normalize(json['response']['results'])
+  df_results.append(df)
+all_df = pd.concat(df_results)
+```
+
+
+## Modelling
+
+### Explore in python
+
+> https://www.kaggle.com/code/mykeysid10/natural-gas-price-prediction-using-time-series
+
+```{python}
+import warnings
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+warnings.filterwarnings("ignore")
+from sklearn.metrics import mean_squared_error, r2_score
+import statsmodels.api as sm
+import plotly.express as px
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+```
+
+```{python}
+data = (
+  pd
+  .read_csv("data/Natural_Gas_Spot_and_Futures_Prices_(NYMEX).csv")
+  [['Day', "Henry Hub Natural Gas Spot Price $/MMBTU"]]
+  .dropna(subset = ['Henry Hub Natural Gas Spot Price $/MMBTU'])
+  .assign(
+    Day = lambda x: pd.to_datetime(x.Day, format = "%m/%d/%Y"))
+  .rename(
+    columns={'Day': 'date',
+    'Henry Hub Natural Gas Spot Price $/MMBTU': 'gas_price'})
+  .set_index("date")
+
+  )
+#read.csv2("data/Natural_Gas_Spot_and_Futures_Prices_(NYMEX).csv", sep = ",") 
+print(data.tail())
+print(data.info())
+```
+
+```{python}
+data.isnull().sum()
+```
+```{python}
+import plotly.express as px
+
+fig = px.line(data, title = 'Natural Gas Spot Prices', template = 'plotly_dark')
+fig.show()
+```
+
+
+```{python}
+fig = px.histogram(data, x = "gas_price", template = 'plotly_dark')
+fig.show()
+
+```
+
+
+```{python}
+def test_stationarity(timeseries):
+  rolmean = timeseries.rolling(25).mean()
+  rolstd = timeseries.rolling(25).std()
+  plt.figure(figsize = (20,10))
+  orig = plt.plot(timeseries, color='blue',label='Original')
+  mean = plt.plot(rolmean, color='red', label='Rolling Mean')
+  std = plt.plot(rolstd, color='black', label = 'Rolling Std')
+  plt.legend(loc='best')
+  plt.title('Rolling Mean & Standard Deviation')
+  plt.show(block=False)
+  print('Results of Dickey-Fuller Test:')
+  dftest = adfuller(timeseries, autolag = 'AIC')
+  dfoutput = pd.Series(dftest[0:4], index = ['Test Statistic','p-value','#Lags Used','Number of Observations Used'])
+  for key,value in dftest[4].items():
+    dfoutput['Critical Value (%s)'%key] = value
+  print(dfoutput)
+```
+
+```{python}
+test_stationarity(data)
+plt.show()
+```
+
+```{python}
+ts_sqrt = np.sqrt(data)
+expwighted_avg = ts_sqrt.ewm(halflife = 25).mean()
+
+ts_sqrt_ewma_diff = ts_sqrt - expwighted_avg
+test_stationarity(ts_sqrt_ewma_diff)
+```
+
+```{python}
+ts_sqrt_diff = ts_sqrt - ts_sqrt.shift()
+
+plt.figure(figsize = (20,10))
+plt.plot(ts_sqrt_diff)
+plt.show()
+```
+
+```{python}
+ts_sqrt = np.sqrt(data)
+ts_sqrt_diff = ts_sqrt - ts_sqrt.shift()
+ts_sqrt_diff.dropna(inplace = True)
+test_stationarity(ts_sqrt_diff)
+```
+
+
+
+### Henry hup automatical call data
+
+```{python}
+url_henry = 'https://www.eia.gov/dnav/ng/xls/NG_PRI_FUT_S1_D.xls'
+file_name = "file.csv"
+
+subprocess.run(f"curl -o {file_name} {url_henry}", shell=True, check=True)
+```
+
+```{python}
+henry = pd.ExcelFile('file.xlsx')
+henry.sheet_names
+```
+
+
+```{python}
+spot_df = (
+    henry
+    .parse('Data 1')
+    .rename(columns=henry.parse('Data 1').iloc[1] )
+    .drop(henry.parse('Data 1').index[0:2])
+    .pipe(clean_names)
+    .assign(
+        date = lambda x: pd.to_datetime(x.date).dt.date
+    )
+    .rename(columns = {'henry_hub_natural_gas_spot_price_dollars_per_million_btu_': 'spot'})
+    [['date', 'spot']]
+    .dropna()
+    .astype({'spot': 'float64',
+            'date': 'datetime64[D]'})
+    .set_index('date')
+)
+```
+
+```{python}
+spot_df
+```
+
+```{python}
+spot_df.loc[spot_df.index >'2020-01-01']
+```
+
+
+```{python}
+import plotly.express as px
+
+fig = px.line(spot_df.loc[spot_df.index >'2023-01-01'], y="spot")
+fig.show()
+```
+
+```{python}
+plt.plot(spot_df)
+plt.title('Original Series')
+plt.xlabel('Time')
+plt.ylabel('Value')
+plt.show()
+```
+
+### Arima
+
+```{python}
+from statsmodels.tsa.stattools import adfuller
+
+result = adfuller(spot_df.spot.dropna())
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+```
+
+The null hypothesis of the ADF test is that the time series is non-stationary. So, if the p-value of the test is less than the significance level (0.05) then you reject the null hypothesis and infer that the time series is indeed stationary. For our example, we fail to reject the null hypothesis.
+
+```{python}
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+plt.rcParams.update({'figure.figsize':(15,8), 'figure.dpi':120})
+
+# Original Series
+fig, axes = plt.subplots(3, 2, sharex=True)
+axes[0, 0].plot(spot_df.spot); axes[0, 0].set_title('Original Series')
+plot_acf(spot_df.spot, ax=axes[0, 1])
+
+# 1st Differencing
+axes[1, 0].plot(spot_df.spot.diff()); axes[1, 0].set_title('1st Order Differencing')
+plot_acf(spot_df.spot.diff().dropna(), ax=axes[1, 1])
+
+# 2nd Differencing
+axes[2, 0].plot(spot_df.spot.diff().diff()); axes[2, 0].set_title('2nd Order Differencing')
+plot_acf(spot_df.spot.diff().diff().dropna(), ax=axes[2, 1])
+
+plt.show()
+
+print('ADF Statistic for 1st Order Differencing')
+result = adfuller(spot_df.spot.diff().dropna())
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+    print('\t%s: %.3f' % (key, value))
+
+print('\n ADF Statistic for 2nd Order Differencing')
+result = adfuller(spot_df.spot.diff().diff().dropna())
+print('ADF Statistic: %f' % result[0])
+print('p-value: %f' % result[1])
+print('Critical Values:')
+for key, value in result[4].items():
+    print('\t%s: %.3f' % (key, value))
+```
+
+```{python}
+# PACF plot of 1st differenced series
+plt.rcParams.update({'figure.figsize':(15,2.5), 'figure.dpi':120})
+
+fig, axes = plt.subplots(1, 2, sharex=True)
+axes[0].plot(spot_df.spot); axes[0].set_title('1st Differencing')
+axes[1].set(ylim=(0,5))
+plot_pacf(spot_df.spot.dropna(), ax=axes[1])
+
+plt.show()
+```
+
+```{python}
+from statsmodels.tsa.arima.model import ARIMA
+
+model = ARIMA(spot_df.spot, order=(2,1,3))
+model_fit = model.fit()
+print(model_fit.summary())
+```
+
+
+
+```{python}
+# Plot residual errors
+residuals = pd.DataFrame(model_fit.resid)
+fig, ax = plt.subplots(1,2, figsize=(15,2.5))
+residuals.plot(title="Residuals", ax=ax[0])
+residuals.plot(kind='kde', title='Density', ax=ax[1])
+plt.show()
+```
+
+
+```{python}
+# Actual vs Fitted
+fig, ax = plt.subplots(figsize=(15,2))
+ax = spot_df.plot(ax=ax)
+fig = model_fit.plot_predict(85, 100, dynamic=False, ax=ax, plot_insample=False)
+plt.show()
+```
+
+```{python}
+dir(model_fit)
+```
+
+```{python}
+last_date = spot_df.index.max()
+end_date = pd.to_datetime('2023-02-05')
+data_to_predict = pd.Series(spot_df, index=spot_df.index)
+
+forecast = model_fit.predict(start=last_date, end = "2023-02-01")
+```
+
+
+
