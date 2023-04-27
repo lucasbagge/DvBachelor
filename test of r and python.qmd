@@ -32,14 +32,87 @@ df <-
   filter(!is.na(spot))
 
 df %>% 
-  glimpse()
+  write.csv2('data/data_final.csv')
 ```
+
+```{r}
+df %>% 
+  summarise(
+    min = min(day),
+    max = max(day)
+  )
+```
+
+```{r}
+min_date <- "1997-01-07"
+max_date <- "2023-01-10"
+```
+
 
 ```{r}
 df %>% 
   plot_time_series(.date_var = day,
                    .value = spot)
 ```
+
+## Collect other variable
+
+### NASDAQ Composite Index
+
+```{r}
+library(tidyquant)
+
+comp <- tq_get('^IXIC', from = min_date)
+comp
+```
+
+* and "^IXIC" is the Yahoo Finance ticker symbol for the NASDAQ Composite Index.
+
+```{r}
+ggplot(data = comp, aes(x = date, y = close)) +
+  geom_line() +
+  labs(title = "NASDAQ Composite Index (COMP) Closing Prices", y = "Price")
+
+```
+
+### S&P 500 Index	
+
+```{r}
+sp500 <- tq_get("^GSPC", get = "stock.prices", from = min_date)
+
+ggplot(data = sp500, aes(x = date, y = close)) +
+  geom_line() +
+  labs(title = "S&P 500 Closing Prices", y = "Price")
+
+```
+
+### Dow Jones Industrial Average Index
+
+```{r}
+dji <- tq_get("^DJI", get = "stock.prices", from = min_date)
+
+
+ggplot(data = dji, aes(x = date, y = close)) +
+  geom_line() +
+  labs(title = "S&P 500 Closing Prices", y = "Price")
+```
+
+### Exchange Rates USD/EUR	
+
+```{r}
+library(priceR)
+
+historical_exchange_rates("EUR", to = "USD",
+                          start_date = "1997-01-07", end_date = "2023-01-10")
+
+eurusd <- tq_get("EURUSD", get = "forex.daily", from = min_date)
+
+ggplot(data = eurusd, aes(x = date, y = close)) +
+  geom_line() +
+  labs(title = "Exchange Rates USD/EUR", y = "Rate")
+
+```
+
 
 ## Test
 
@@ -177,15 +250,6 @@ results
 
 
 2) Winsorization: Winsorization is a technique that replaces the extreme values with less extreme values. This can be done by setting a threshold beyond which the extreme values are replaced with the next highest or lowest value within the threshold. The winsorize function in the DescTools package in R can be used for this purpose.
-
-```{r}
-# Winsorize the time series
-library(DescTools)
-DescTools::Winsorize()
-df %>% 
-  mutate(value = Winsorize(value))
-
-```
 
 
 3) Data Transformation: Transforming the data can reduce the impact of outliers on the analysis. Common transformations include taking the logarithm or square root of the data or applying the Box-Cox transformation. The log and sqrt functions are built into R, and the boxcox function is available in the MASS package.
@@ -616,7 +680,254 @@ ts_sqrt_diff.dropna(inplace = True)
 test_stationarity(ts_sqrt_diff)
 ```
 
+```{python}
+data
+```
 
+
+```{python}
+data = data.sort_values(by = 'date')
+
+train = data['1997-01-06': '2020-01-06'] # 7 Jan 1997 to 6 Jan 2021 
+test = data['2020-01-07': '2023-01-10 '] # 7 Jan 2021  to 1 Mar 2022 
+
+print("Length of Train Data: ", len(train))
+print("Length of Test Data: ", len(test))
+```
+
+```{python}
+ax = train.plot(figsize = (20, 10), color = 'b')
+test.plot(ax = ax, color = 'black')
+plt.legend(['train set', 'test set'])
+plt.show()
+```
+
+
+```{python}
+plt.rcParams.update({'figure.figsize':(9,7), 'figure.dpi':120})
+
+# Original Series
+fig, axes = plt.subplots(4, 2, sharex=True)
+axes[0, 0].plot(data.gas_price); axes[0, 0].set_title('Original Series')
+plot_acf(data.gas_price, ax=axes[0, 1])
+
+# 1st Differencing
+axes[1, 0].plot(data.gas_price.diff()); axes[1, 0].set_title('1st Order Differencing')
+plot_acf(data.gas_price.diff().dropna(), ax=axes[1, 1])
+
+# 2nd Differencing
+axes[2, 0].plot(data.gas_price.diff().diff()); axes[2, 0].set_title('2nd Order Differencing')
+plot_acf(data.gas_price.diff().diff().dropna(), ax=axes[2, 1])
+
+# 3rd Differencing
+axes[3, 0].plot(data.gas_price.diff().diff().diff()); axes[3, 0].set_title('3nd Order Differencing')
+plot_acf(data.gas_price.diff().diff().diff().dropna(), ax=axes[3, 1])
+
+plt.show()
+```
+
+```{python}
+plt.rcParams.update({'figure.figsize':(9,3), 'figure.dpi':120})
+
+fig, axes = plt.subplots(1, 2, sharex=True)
+axes[0].plot(data.gas_price.diff()); axes[0].set_title('1st Differencing')
+axes[1].set(ylim=(0,5))
+plot_pacf(data.gas_price.diff().dropna(), ax=axes[1])
+
+plt.show()
+```
+
+```{python}
+plt.rcParams.update({'figure.figsize':(9,3), 'figure.dpi':120})
+
+fig, axes = plt.subplots(1, 2, sharex=True)
+
+axes[0].plot(data.gas_price.diff()); axes[0].set_title('1st Differencing')
+axes[1].set(ylim=(0,1.2))
+plot_acf(data.gas_price.diff().dropna(), ax=axes[1])
+
+plt.show()
+```
+
+```{python}
+model = sm.tsa.arima.ARIMA(train, order = (1, 2, 1))
+arima_model = model.fit() 
+print(arima_model.summary())
+```
+
+```{python}
+yp_train = arima_model.predict(start = 0, end = (len(train)-1))
+yp_test = arima_model.predict(start = 0, end = (len(test)-1)) 
+
+print("Train Data:\nMean Square Error: {}".format(mean_squared_error(train, yp_train)))
+print("\nTest Data:\nMean Square Error: {}".format(mean_squared_error(test, yp_test)))
+```
+
+```{python}
+slot = 15
+
+x_train = []
+y_train = []
+
+for i in range(slot, len(train)):
+    x_train.append(train.iloc[i-slot:i, 0])
+    y_train.append(train.iloc[i, 0])
+    
+x_train, y_train = np.array(x_train), np.array(y_train)
+
+x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+print(x_train.shape, y_train.shape)
+```
+
+
+```{python}
+import tensorflow as tf
+import os
+from tensorflow.keras import layers, models
+
+lstm_model = tf.keras.Sequential()
+lstm_model.add(tf.keras.layers.LSTM(units = 50, input_shape = (slot, 1), return_sequences = True, activation = 'relu'))
+#lstm_model.add(tf.keras.layers.Dropout(0.01))
+lstm_model.add(tf.keras.layers.LSTM(units = 50, activation = 'relu', return_sequences = True))
+#lstm_model.add(tf.keras.layers.Dropout(0.01))
+lstm_model.add(tf.keras.layers.LSTM(units = 50, return_sequences = True))
+#lstm_model.add(tf.keras.layers.Dropout(0.01))
+lstm_model.add(tf.keras.layers.LSTM(units = 50, return_sequences = False))
+#lstm_model.add(tf.keras.layers.Dropout(0.01))
+lstm_model.add(tf.keras.layers.Dense(units = 1))
+lstm_model.compile(loss = 'mean_squared_error', optimizer = 'adam')
+
+lstm_model.summary()
+```
+
+```{python}
+early_stopping = tf.keras.callbacks.EarlyStopping(monitor = 'loss', patience = 7)
+
+history = lstm_model.fit(x_train, y_train, epochs = 100, 
+                         batch_size = 64, 
+                         verbose = 1, shuffle = False, 
+                         callbacks = [early_stopping])
+```
+
+```{python}
+yp_train = lstm_model.predict(x_train)
+a = pd.DataFrame(yp_train)
+a.rename(columns = {0: 'gp_pred'}, inplace = True); 
+a.index = train.iloc[slot:].index
+train_compare = pd.concat([train.iloc[slot:], a], 1)
+```
+
+```{python}
+plt.figure(figsize = (15, 5))
+plt.plot(train_compare['gas_price'], color = 'red', label = "Actual Natural Gas Price")
+plt.plot(train_compare['gp_pred'], color = 'blue', label = 'Predicted Price')
+plt.title("Natural Gas Price Prediction on Train Data")
+plt.xlabel('Time')
+plt.ylabel('Natural gas price')
+plt.legend(loc = 'best')
+plt.show()
+```
+
+
+```{python}
+dataset_total = pd.concat((train, test), axis = 0)
+inputs = dataset_total[len(dataset_total) - len(test)- slot:].values
+inputs = inputs.reshape(-1, 1)
+
+x_test = []
+y_test = []
+for i in range (slot, len(test)+slot): #Test+15
+    x_test.append(inputs[i-slot:i, 0])
+    y_test.append(train.iloc[i, 0])
+      
+x_test, y_test = np.array(x_test), np.array(y_test)
+
+x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
+pred_price = lstm_model.predict(x_test)
+```
+
+```{python}
+b = pd.DataFrame(pred_price)
+b.rename(columns = {0: 'gp_pred'}, inplace = True); 
+b.index = test.index
+test_compare = pd.concat([test, b], 1)
+```
+
+
+```{python}
+plt.figure(figsize = (15,5))
+plt.plot(test_compare['gas_price'], color = 'red', label = "Actual Natural Gas Price")
+plt.plot(test_compare['gp_pred'], color = 'blue', label = 'Predicted Price')
+plt.title("Natural Gas Price Prediction On Test Data")
+plt.xlabel('Time')
+plt.ylabel('Natural gas price')
+plt.legend(loc = 'best')
+plt.show()
+```
+
+
+```{python}
+mse_train = mean_squared_error(train_compare['gas_price'], train_compare['gp_pred'])
+mse_test = mean_squared_error(test_compare['gas_price'], test_compare['gp_pred'])
+
+r2_train = r2_score(train_compare['gas_price'], train_compare['gp_pred'])
+r2_test = r2_score(test_compare['gas_price'], test_compare['gp_pred'])
+
+print("Train Data:\nMSE: {}\nR Square: {}".format(mse_train, r2_train))
+print("\nTest Data:\nMSE: {}\nR Square: {}".format(mse_test, r2_test))
+```
+
+
+
+
+```{python}
+data
+```
+
+```{python}
+forecast = pd.DataFrame({'date': pd.date_range(start = '2/10/2023', end = '2/28/2023')}) # 2 March to 20 March 
+
+inputs = test[len(test) - slot: ].values
+
+for i in range(slot, len(forecast)): 
+    inputs = inputs.T
+    inputs = np.reshape(inputs, (inputs.shape[0], inputs.shape[1], 1))
+    pred_price = savedModel.predict(inputs[:,i-slot:i])
+    inputs = np.append(inputs, pred_price)
+    inputs = np.reshape(inputs, (inputs.shape[0], 1))
+
+forecast['gp_pred'] = inputs
+forecast = forecast.set_index('date')
+
+```
+
+```{python}
+forecast.reset_index(inplace = True)
+
+fig = px.line(forecast, x = "date", y = "gp_pred", title = 'Natural Gas Price Forecasting', template = 'plotly_dark')
+fig.show()
+```
+
+
+```{python}
+lstm_model.save("lstm_model.h5")
+```
+
+```{python}
+# assign location
+path='Weights_folder/Weights'
+ 
+# save
+lstm_model.save('gfgModel.h5')
+```
+
+```{python}
+# load model
+from tensorflow.keras.models import load_model
+
+savedModel=load_model('gfgModel.h5')
+savedModel.summary()
+```
 
 ### Henry hup automatical call data
 

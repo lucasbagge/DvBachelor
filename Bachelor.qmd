@@ -1,0 +1,490 @@
+---
+title: "Bachelor"
+format: pdf
+#bibliography: references.bib
+---
+
+# Introduction
+
+Accurate forecasts of natural gas prices are of great importance for a variety of stakeholders, including energy companies, consumers, financial markets, policymakers, and international traders.
+
+For energy companies, natural gas is a key input for electricity production, heating, and industrial processes. Accurate price forecasts enable energy companies to manage production costs, optimize supply chain logistics, and make informed decisions about investments in infrastructure.
+
+For consumers, natural gas is a critical energy source for heating, cooking, and hot water. Accurate price forecasts enable consumers to budget for their energy expenses and make informed decisions about their energy usage.
+
+In financial markets, natural gas prices have a significant impact on commodity futures markets, stock markets, and currency markets. Accurate price forecasts can help investors make informed decisions and manage risk, reducing price volatility and ensuring economic stability.
+
+Natural gas is also increasingly traded on global markets, and accurate price forecasts are critical for importers and exporters to make informed decisions about supply contracts and investments in infrastructure.
+
+Finally, environmental policy plays a key role in energy production and consumption. Accurate price forecasts can inform policy decisions about energy production and consumption, and help guide efforts to reduce greenhouse gas emissions.
+
+In summary, accurate forecasts of natural gas prices are crucial for ensuring energy security, promoting economic stability, managing production costs, reducing price volatility, and supporting efforts to address climate change.
+
+# Methodology
+
+## Time Series
+
+A time series is a sequence of data points collected over time, where the time intervals between each data point are equally spaced. These data points can be anything that can be measured or observed, such as stock prices, temperature readings, or website traffic.
+
+Time series data can be analyzed to identify patterns or trends over time, such as seasonal fluctuations, long-term trends, or short-term changes. This type of analysis can be useful for predicting future values, identifying anomalies or outliers, or understanding the underlying factors that contribute to the data.
+
+Time series data is commonly used in a variety of fields, including finance, economics, meteorology, engineering, and many others. There are many statistical techniques and machine learning algorithms that can be applied to analyze and model time series data, such as ARIMA models, exponential smoothing, and neural networks.
+
+Time series data is important because it allows us to analyze and understand how a variable changes over time. This can be useful in many different contexts, such as predicting future values, identifying patterns and trends, detecting anomalies or outliers, and understanding the underlying factors that contribute to the data.
+
+Machine learning techniques can be particularly useful for analyzing time series data because they can automatically learn patterns and relationships in the data that may be difficult or impossible to detect manually. Some examples of machine learning techniques that can be applied to time series data include:
+
+Time series forecasting: This involves using historical data to predict future values of a time series. Popular techniques for time series forecasting include ARIMA models, exponential smoothing, and machine learning algorithms such as neural networks.
+
+Anomaly detection: This involves identifying unusual or unexpected patterns in a time series that may indicate a problem or opportunity. Machine learning techniques such as clustering, support vector machines (SVMs), and decision trees can be used for anomaly detection.
+
+Classification: This involves assigning a label or category to each data point in a time series. For example, a time series of electrocardiogram (ECG) readings could be classified as normal or abnormal. Machine learning algorithms such as k-nearest neighbors (KNN), decision trees, and support vector machines (SVMs) can be used for classification.
+
+Pattern recognition: This involves identifying recurring patterns or trends in a time series that may be useful for predicting future values or understanding underlying factors. Machine learning techniques such as recurrent neural networks (RNNs), convolutional neural networks (CNNs), and Hidden Markov Models (HMMs) can be used for pattern recognition.
+
+Overall, machine learning can be a powerful tool for analyzing time series data, and can help us gain insights and make predictions that would be difficult or impossible to achieve with traditional statistical methods.
+
+### Stationarity
+
+In time series analysis, stationarity refers to a statistical property of a time series in which its statistical properties remain constant over time. More specifically, a stationary time series has the following mathematical characteristics, Let {Xt} be a time series with the following properties:
+
+1) Constant mean: E(Xt) = µ for all t
+
+2) Constant variance: Var(Xt) = σ^2 for all t
+
+3) Constant autocovariance: Cov(Xt, Xt-h) = γh for all t and for some constant γh that only depends on the time lag h.
+
+If these three conditions hold for all t, then the time series {Xt} is said to be weakly stationary. If, in addition, the joint distribution of any finite set of observations is time-invariant, then {Xt} is said to be strongly stationary or strictly stationary.
+
+The constant mean condition means that the expected value of the time series does not change over time. The constant variance condition means that the variability of the time series does not change over time. The constant autocovariance condition means that the relationship between the observations at different time points remains constant over time.
+
+The notion of stationarity is important in time series analysis because it simplifies the modeling process and allows for more accurate forecasting. When a time series is not stationary, various techniques can be used to transform the time series into a stationary process, such as differencing or seasonal differencing. These transformations aim to remove trends, seasonal patterns, or other forms of non-stationarity, making the time series easier to model and forecast.
+
+### Autoregressive Processes
+
+Autoregressive Processes, or AR processes for short, are a class of time series models that are commonly used for time series forecasting. The basic idea behind an AR process is that the value of a time series at a given time point depends on its past values. In other words, the model uses a linear combination of the past values of the series to predict the next value.
+
+Mathematically, an AR process of order p, denoted AR(p), is defined as:
+
+$$
+X_t = c + phi_1X_{t-1} + phi_2X_{t-2} + ... + phi_p*X_{t-p} + e_t
+$$
+
+where X_t is the value of the time series at time t, c is a constant, phi_1, phi_2, ..., phi_p are the autoregressive coefficients, e_t is a random error term with mean 0 and variance sigma^2, and p is the order of the process.
+
+To make a prediction for the next value of the series, we use the past p values of the series to calculate the predicted value:
+
+X_{t+1} = c + phi_1X_{t} + phi_2X_{t-1} + ... + phi_p*X_{t-p+1}
+
+The coefficients phi_1, phi_2, ..., phi_p are typically estimated using a technique called maximum likelihood estimation, which involves finding the values of the coefficients that maximize the likelihood of observing the observed values of the series.
+
+One important property of AR processes is stationarity, which means that the mean and variance of the series are constant over time. Stationarity is important because it allows us to make predictions that are accurate over time, and also simplifies the modeling process. To ensure stationarity, the roots of the AR characteristic polynomial must lie outside the unit circle, which can be checked using the roots of unity test.
+
+Overall, AR processes are a simple but powerful class of time series models that can be used for time series forecasting and prediction. They are widely used in practice, and many more advanced time series models build on the basic framework of AR processes.
+
+### Deep Learning
+
+
+```{r}
+library("reticulate")
+virtualenv_create(envname  = "bacenv",
+                  packages = c("pandas", "keras", "numpy"))
+#Sys.setenv(RETICULATE_PYTHON = "bacenv/bin/python")
+Sys.setenv(RETICULATE_PYTHON = "/Users/lucasbagge/.virtualenvs/bacenv/bin/python")
+```
+
+```{r}
+use_virtualenv("bacenv")
+py_config()
+```
+
+```{r}
+library(reticulate)
+path_to_python <- install_python()
+virtualenv_create("r-reticulate", python = path_to_python)
+```
+
+```{r}
+install.packages("keras")
+library(keras)
+install_keras(envname = "r-reticulate")
+```
+
+```{r}
+library(tensorflow)
+tf$constant("Hello Tensorflow!")
+```
+
+
+```{r}
+grep(pattern = "pandas|keras|numpy",
+     x       = as.character(py_list_packages(envname = "bacenv")$package))
+```
+
+
+## Experiments
+
+```{r}
+library(tidyverse)
+library(timetk)
+
+# Core Tidyverse
+library(tidyverse)
+library(glue)
+library(forcats)
+
+# Time Series
+library(timetk)
+library(tidyquant)
+library(tibbletime)
+
+# Visualization
+library(cowplot)
+
+# Preprocessing
+library(recipes)
+
+# Sampling / Accuracy
+library(rsample)
+library(yardstick) 
+
+# Modeling
+library(keras)
+```
+
+
+### Data
+
+```{r}
+df <- read_csv2("data/data_final.csv") %>%  
+  select(c(day, spot))
+
+data <- df %>% 
+  tk_tbl() %>% 
+  mutate(index = as_date(day)) %>% 
+  as_tbl_time(index = index) %>% 
+  select(c(index, spot)) %>% 
+  rename(value = spot)
+```
+
+```{r}
+data
+```
+
+```{r}
+p1 <- data %>%
+    ggplot(aes(index, value)) +
+    geom_point(color = palette_light()[[1]], alpha = 0.5) +
+    theme_tq() +
+    labs(
+        title = "From 1749 to 2013 (Full Data Set)"
+    )
+
+p2 <- data %>%
+    ggplot(aes(index, value)) +
+    geom_line(color = palette_light()[[1]], alpha = 0.5) +
+    geom_point(color = palette_light()[[1]]) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+    theme_tq() +
+    labs(
+        title = "1749 to 1800 (Zoomed In To Show Cycle)",
+        caption = "datasets::sunspot.month"
+    )
+
+p_title <- ggdraw() + 
+    draw_label("Sunspots", size = 18, fontface = "bold", colour = palette_light()[[1]])
+
+plot_grid(p_title, p1, p2, ncol = 1, rel_heights = c(0.1, 1, 1))
+```
+
+```{r}
+tidy_acf <- function(data, value, lags = 0:20) {
+    
+    value_expr <- enquo(value)
+    
+    acf_values <- data %>%
+        pull(value) %>%
+        acf(lag.max = tail(lags, 1), plot = FALSE) %>%
+        .$acf %>%
+        .[,,1]
+    
+    ret <- tibble(acf = acf_values) %>%
+        rowid_to_column(var = "lag") %>%
+        mutate(lag = lag - 1) %>%
+        filter(lag %in% lags)
+    
+    return(ret)
+}
+```
+
+```{r}
+max_lag <- 12 * 50
+
+data %>%
+    tidy_acf(value, lags = 0:max_lag)
+```
+
+```{r}
+data %>%
+    tidy_acf(value, lags = 0:max_lag) %>%
+    ggplot(aes(lag, acf)) +
+    geom_segment(aes(xend = lag, yend = 0), color = palette_light()[[1]]) +
+    geom_vline(xintercept = 120, size = 3, color = palette_light()[[2]]) +
+    annotate("text", label = "10 Year Mark", x = 130, y = 0.8, 
+             color = palette_light()[[2]], size = 6, hjust = 0) +
+    theme_tq() +
+    labs(title = "ACF: Sunspots")
+```
+
+```{r}
+data %>%
+    tidy_acf(value, lags = 115:135) %>%
+    ggplot(aes(lag, acf)) +
+    geom_vline(xintercept = 120, size = 3, color = palette_light()[[2]]) +
+    geom_segment(aes(xend = lag, yend = 0), color = palette_light()[[1]]) +
+    geom_point(color = palette_light()[[1]], size = 2) +
+    geom_label(aes(label = acf %>% round(2)), vjust = -1,
+              color = palette_light()[[1]]) +
+    annotate("text", label = "10 Year Mark", x = 121, y = 0.8, 
+             color = palette_light()[[2]], size = 5, hjust = 0) +
+    theme_tq() +
+    labs(title = "ACF: Sunspots",
+         subtitle = "Zoomed in on Lags 115 to 135")
+```
+
+```{r}
+optimal_lag_setting <- data %>%
+    tidy_acf(value, lags = 115:135) %>%
+    filter(acf == max(acf)) %>%
+    pull(lag)
+
+optimal_lag_setting
+```
+
+```{r}
+periods_train <- 12 * 50
+periods_test  <- 12 * 10
+skip_span     <- 12 * 20
+
+rolling_origin_resamples <- rolling_origin(
+    data,
+    initial    = periods_train,
+    assess     = periods_test,
+    cumulative = FALSE,
+    skip       = skip_span
+)
+
+rolling_origin_resamples
+```
+
+
+### Backtesting: Time Series Cross Validation https://www.r-bloggers.com/2018/04/time-series-deep-learning-forecasting-sunspots-with-keras-stateful-lstm-in-r/
+
+```{r}
+# Plotting function for a single split
+plot_split <- function(split, expand_y_axis = TRUE, alpha = 1, size = 1, base_size = 14) {
+    
+    # Manipulate data
+    train_tbl <- training(split) %>%
+        add_column(key = "training") 
+    
+    test_tbl  <- testing(split) %>%
+        add_column(key = "testing") 
+    
+    data_manipulated <- bind_rows(train_tbl, test_tbl) %>%
+        as_tbl_time(index = index) %>%
+        mutate(key = fct_relevel(key, "training", "testing"))
+        
+    # Collect attributes
+    train_time_summary <- train_tbl %>%
+        tk_index() %>%
+        tk_get_timeseries_summary()
+    
+    test_time_summary <- test_tbl %>%
+        tk_index() %>%
+        tk_get_timeseries_summary()
+    
+    # Visualize
+    g <- data_manipulated %>%
+        ggplot(aes(x = index, y = value, color = key)) +
+        geom_line(size = size, alpha = alpha) +
+        theme_tq(base_size = base_size) +
+        scale_color_tq() +
+        labs(
+            title    = glue("Split: {split$id}"),
+            subtitle = glue("{train_time_summary$start} to {test_time_summary$end}"),
+            y = "", x = ""
+        ) +
+        theme(legend.position = "none") 
+    
+    if (expand_y_axis) {
+        
+        sun_spots_time_summary <- data %>% 
+            tk_index() %>% 
+            tk_get_timeseries_summary()
+        
+        g <- g +
+            scale_x_date(limits = c(sun_spots_time_summary$start, 
+                                    sun_spots_time_summary$end))
+    }
+    
+    return(g)
+}
+```
+
+```{r}
+rolling_origin_resamples$splits[[1]] %>%
+    plot_split(expand_y_axis = TRUE) +
+    theme(legend.position = "bottom")
+```
+
+```{r}
+# Plotting function that scales to all splits 
+plot_sampling_plan <- function(sampling_tbl, expand_y_axis = TRUE, 
+                               ncol = 3, alpha = 1, size = 1, base_size = 14, 
+                               title = "Sampling Plan") {
+    
+    # Map plot_split() to sampling_tbl
+    sampling_tbl_with_plots <- sampling_tbl %>%
+        mutate(gg_plots = map(splits, plot_split, 
+                              expand_y_axis = expand_y_axis,
+                              alpha = alpha, base_size = base_size))
+    
+    # Make plots with cowplot
+    plot_list <- sampling_tbl_with_plots$gg_plots 
+    
+    p_temp <- plot_list[[1]] + theme(legend.position = "bottom")
+    legend <- get_legend(p_temp)
+    
+    p_body  <- plot_grid(plotlist = plot_list, ncol = ncol)
+    
+    p_title <- ggdraw() + 
+        draw_label(title, size = 18, fontface = "bold", colour = palette_light()[[1]])
+    
+    g <- plot_grid(p_title, p_body, legend, ncol = 1, rel_heights = c(0.05, 1, 0.05))
+    
+    return(g)
+    
+}
+```
+
+```{r}
+rolling_origin_resamples %>%
+    plot_sampling_plan(expand_y_axis = T, ncol = 3, alpha = 1, size = 1, base_size = 10, 
+                       title = "Backtesting Strategy: Rolling Origin Sampling Plan")
+```
+
+```{r}
+rolling_origin_resamples %>%
+    plot_sampling_plan(expand_y_axis = F, ncol = 3, alpha = 1, size = 1, base_size = 10, 
+                       title = "Backtesting Strategy: Zoomed In")
+```
+
+### 5.0 Modeling The Keras Stateful LSTM Model
+
+```{r}
+split    <- rolling_origin_resamples$splits[[11]]
+split_id <- rolling_origin_resamples$id[[11]]
+```
+
+```{r}
+plot_split(split, expand_y_axis = FALSE, size = 0.5) +
+    theme(legend.position = "bottom") +
+    ggtitle(glue("Split: {split_id}"))
+```
+
+
+```{r}
+df_trn <- training(split)
+df_tst <- testing(split)
+
+df <- bind_rows(
+    df_trn %>% add_column(key = "training"),
+    df_tst %>% add_column(key = "testing")
+) %>% 
+    as_tbl_time(index = index)
+
+df
+```
+
+```{r}
+rec_obj <- recipe(value ~ ., df) %>%
+    step_sqrt(value) %>%
+    step_center(value) %>%
+    step_scale(value) %>%
+    prep()
+
+df_processed_tbl <- bake(rec_obj, df)
+
+df_processed_tbl
+```
+
+```{r}
+center_history <- rec_obj$steps[[2]]$means["value"]
+scale_history  <- rec_obj$steps[[3]]$sds["value"]
+
+c("center" = center_history, "scale" = scale_history)
+```
+
+
+
+```{r}
+# Model inputs
+lag_setting  <- 120 # = nrow(df_tst)
+batch_size   <- 40
+train_length <- 440
+tsteps       <- 1
+epochs       <- 300
+```
+
+```{r}
+# Training Set
+lag_train_tbl <- df_processed_tbl %>%
+    mutate(value_lag = lag(value, n = lag_setting)) %>%
+    filter(!is.na(value_lag)) %>%
+    filter(key == "training") %>%
+    tail(train_length)
+
+x_train_vec <- lag_train_tbl$value_lag
+x_train_arr <- array(data = x_train_vec, dim = c(length(x_train_vec), 1, 1))
+
+y_train_vec <- lag_train_tbl$value
+y_train_arr <- array(data = y_train_vec, dim = c(length(y_train_vec), 1))
+
+# Testing Set
+lag_test_tbl <- df_processed_tbl %>%
+    mutate(
+        value_lag = lag(value, n = lag_setting)
+    ) %>%
+    filter(!is.na(value_lag)) %>%
+    filter(key == "testing")
+
+x_test_vec <- lag_test_tbl$value_lag
+x_test_arr <- array(data = x_test_vec, dim = c(length(x_test_vec), 1, 1))
+
+y_test_vec <- lag_test_tbl$value
+y_test_arr <- array(data = y_test_vec, dim = c(length(y_test_vec), 1))
+```
+
+```{r}
+model <- keras_model_sequential()
+
+model %>%
+    layer_lstm(units            = 50, 
+               input_shape      = c(tsteps, 1), 
+               batch_size       = batch_size,
+               return_sequences = TRUE, 
+               stateful         = TRUE) %>% 
+    layer_lstm(units            = 50, 
+               return_sequences = FALSE, 
+               stateful         = TRUE) %>% 
+    layer_dense(units = 1)
+
+model %>% 
+    compile(loss = 'mae', optimizer = 'adam')
+
+model
+```
+
+
+### Source of Data
